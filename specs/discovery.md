@@ -176,11 +176,15 @@ Decisões que precisam de resposta do negócio antes de fechar a spec.
 
 | Decisão | Justificativa | Perguntas em aberto resolvidas |
 | ------- | ------------- | ------------------------------ |
+| Priorizar como persona a pessoa que se desloca diariamente; pessoas que planejam atividades ao ar livre e cuidam da família permanecem como personas secundárias. | O uso mobile e a necessidade de decidir em poucos segundos são os sinais mais fortes do briefing; essa prioridade orienta a primeira experiência sem excluir os demais usos. | **1 (validada):** público prioritário e objetivo principal. |
+| Avaliar o sucesso inicial por testes de usabilidade, observando a conclusão da busca até a exibição da previsão e o tempo para concluir a tarefa. Não coletar telemetria na v1. | Permite verificar se a consulta é rápida e compreensível sem introduzir coleta de dados antes de uma decisão sobre telemetria e LGPD (pergunta 28). | **2 (validada):** testes de usabilidade, sem telemetria. |
 | Usar a Open-Meteo como fonte de dados, sem chave de API. | Atende à consulta de geocodificação e previsão sem exigir credencial no cliente. | **11 (parcialmente):** define o provedor e elimina a necessidade de chave; termos de uso, atribuição e limites de chamadas ainda precisam ser validados. |
-| Considerar a previsão de 5 dias como hoje e os 4 dias seguintes. | Define um período único para a previsão e evita ambiguidade na contagem dos dias. | **18:** fecha o período e inclui a data local de hoje; **3 (parcialmente):** mantém o escopo diário já descrito em RF-04, mas não decide se também haverá previsão horária. |
+| Limitar a v1 à previsão diária de hoje e dos 4 dias seguintes, com máxima, mínima e condição; não incluir previsão horária. | Mantém o escopo alinhado ao RF-04 e define um período único, reduzindo complexidade de dados e interface. | **3 (validada) e 18:** previsão diária, sem horária, incluindo hoje e os 4 dias seguintes. |
+| Limitar a busca a cidades do Brasil, pesquisadas pelo nome e desambiguadas por estado; não aceitar CEP nem coordenadas na v1. | Mantém a busca simples e concentra os resultados no público geográfico definido para a primeira versão. | **4 (validada):** cobertura Brasil, busca por nome de cidade; CEP e coordenadas fora do escopo da v1. |
 | Usar Celsius como unidade padrão. | Mantém a configuração inicial simples e confirma o requisito existente de iniciar em Celsius. | **7 (parcialmente):** define a unidade inicial de temperatura; as unidades de vento, pressão e precipitação continuam em aberto. |
 | Não oferecer autenticação nem persistência de dados no servidor. | Evita contas e infraestrutura de dados de usuário, mantendo a consulta sem cadastro. | **6 (parcialmente):** descarta histórico ou favoritos persistidos no servidor, mas não define se haverá armazenamento local dessas funcionalidades. |
 | Usar português do Brasil como idioma da interface. | Mantém a experiência consistente com o público e os requisitos atuais do produto. | **8:** define o idioma da UI; suporte a outros idiomas fica fora das decisões desta versão. |
+| Entregar somente uma aplicação web responsiva, sem aplicativo nativo nem instalação como PWA na v1. | Corresponde ao briefing de uso pelo navegador e reduz escopo de implementação e operação. | **9 (validada):** plataforma móvel é web responsiva. |
 
 ## 7. Suposições
 
@@ -189,7 +193,7 @@ Premissas adotadas para seguir com a análise. Devem ser validadas com o solicit
 - **S-01:** A aplicação é web responsiva (acessível pelo navegador do celular), sem app nativo nesta versão.
 - **S-02:** Não há contas de usuário, login nem cadastro.
 - **S-03:** "Previsão de 5 dias" significa uma visão diária com temperatura máxima e mínima e condição do tempo.
-- **S-04:** A busca é por nome de cidade, com cobertura global, e desambiguação quando houver homônimas.
+- **S-04:** A busca é por nome de cidade no Brasil, com desambiguação por estado quando houver homônimas.
 - **S-05:** A unidade padrão é Celsius; a troca para Fahrenheit é global na aplicação.
 - **S-06:** A preferência de unidade é guardada localmente no navegador, sem envio a servidor.
 - **S-07:** Os dados meteorológicos vêm de um provedor externo gratuito e sem necessidade de chave de API pessoal, adequado ao contexto de treinamento.
@@ -200,6 +204,6 @@ Premissas adotadas para seguir com a análise. Devem ser validadas com o solicit
 
 ## 8. Próximos passos
 
-1. Validar as Perguntas em Aberto com o solicitante, priorizando as de números 1, 2, 3, 4 e 9.
-2. Confirmar ou ajustar as Suposições S-01 a S-11.
-3. Consolidar os itens confirmados em `specs/weather-app-spec.md` (Module 02), com user stories, critérios de aceite e casos de borda.
+1. Incorporar na spec as decisões validadas para as perguntas 1, 2, 3, 4 e 9.
+2. Validar com o solicitante as demais perguntas em aberto e ajustar as suposições afetadas.
+3. Criar `specs/weather-app-spec.md` (Module 02), com user stories, critérios de aceite e casos de borda.
