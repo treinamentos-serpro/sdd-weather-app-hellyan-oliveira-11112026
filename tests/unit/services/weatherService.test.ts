@@ -7,6 +7,7 @@ import {
 import type { City } from '../../../src/types/city';
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -145,6 +146,78 @@ describe('getWeather', () => {
 
     await expect(getWeather(city)).rejects.toBeInstanceOf(WeatherServiceError);
   });
+
+  describe.each([
+    { service: 'getWeather', request: () => getWeather(city) },
+    { service: 'searchCities', request: () => searchCities('Recife') },
+  ])('transporte de $service', ({ request }) => {
+    it('aborta apenas ao atingir 10 segundos e limpa o timer', async () => {
+      vi.useFakeTimers();
+      let signal: AbortSignal | undefined;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((_url: string, options: RequestInit) => {
+          signal = options.signal ?? undefined;
+          return new Promise<Response>((_resolve, reject) => {
+            signal?.addEventListener('abort', () => {
+              reject(new DOMException('Aborted', 'AbortError'));
+            });
+          });
+        }),
+      );
+
+      const result = request();
+      const rejection = expect(result).rejects.toMatchObject({
+        name: 'WeatherServiceError',
+        message: 'A requisição demorou demais.',
+      });
+
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(signal).toBeInstanceOf(AbortSignal);
+      expect(signal?.aborted).toBe(false);
+      expect(vi.getTimerCount()).toBe(1);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await rejection;
+      await expect(result).rejects.toBeInstanceOf(WeatherServiceError);
+      expect(signal?.aborted).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it.each([
+      { error: new DOMException('Aborted', 'AbortError'), message: 'A requisição demorou demais.' },
+      { error: new TypeError('Failed to fetch'), message: 'Falha de rede.' },
+    ])('converte $error.name em erro tipado e limpa o timer', async ({ error, message }) => {
+      vi.useFakeTimers();
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(error));
+
+      const result = request();
+
+      await expect(result).rejects.toBeInstanceOf(WeatherServiceError);
+      await expect(result).rejects.toThrow(message);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('limpa o timer após sucesso sem abortar a requisição', async () => {
+      vi.useFakeTimers();
+      const fetchMock = mockResponse({ current: {}, daily: {} });
+
+      await request();
+
+      const options = fetchMock.mock.calls[0][1] as RequestInit;
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(options.signal?.aborted).toBe(false);
+    });
+
+    it('limpa o timer após erro HTTP', async () => {
+      vi.useFakeTimers();
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+
+      await expect(request()).rejects.toBeInstanceOf(WeatherServiceError);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+  });
 });
 
 describe('searchCities', () => {
@@ -213,6 +286,7 @@ describe('searchCities', () => {
     ]);
     expect(fetchMock).toHaveBeenCalledWith(
       'https://geocoding-api.open-meteo.com/v1/search?name=Sao%20Paulo%20%26%20regiao&count=10&countryCode=BR&language=pt&format=json',
+      { signal: expect.any(AbortSignal) },
     );
   });
 

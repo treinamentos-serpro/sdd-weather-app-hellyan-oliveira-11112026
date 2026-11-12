@@ -22,6 +22,23 @@ export class WeatherServiceError extends Error {
   }
 }
 
+async function fetchWithTimeout(url: string): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } catch (error) {
+    throw new WeatherServiceError(
+      typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError'
+        ? 'A requisição demorou demais.'
+        : 'Falha de rede.',
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function forecastRecord(value: unknown): Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new WeatherServiceError('Resposta de clima incompleta ou inválida.');
@@ -57,7 +74,7 @@ export async function getWeather(city: City): Promise<WeatherData> {
     temperature_unit: 'celsius',
     wind_speed_unit: 'kmh',
   });
-  const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  const response = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${params}`);
 
   if (!response.ok) {
     throw new WeatherServiceError('Não foi possível buscar o clima.');
@@ -118,7 +135,7 @@ export async function searchCities(name: string): Promise<City[]> {
     return [];
   }
 
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(normalizedName)}&count=10&countryCode=BR&language=pt&format=json`,
   );
 
